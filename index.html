@@ -1,43 +1,296 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>電子式をつくろう</title>
 <style>
-*{box-sizing:border-box}body{margin:0;text-align:center;font-family:sans-serif;background:#f3f8fc;color:#18324a}
-h1{margin:16px 5px}button{margin:5px;padding:11px 15px;border:2px solid #79a8d1;border-radius:12px;background:#fff;font-size:18px;cursor:pointer}
-#menu{max-width:760px;margin:auto}#game{display:none}#board{position:relative;width:min(96vw,900px);height:clamp(440px,70vh,560px);margin:10px auto;overflow:hidden;background:#fff;border:3px solid #8ab0dc;border-radius:18px;touch-action:none}
-.ring,.atom,.e{position:absolute;transform:translate(-50%,-50%)}.ring{width:84px;height:84px;border:2px dashed #d5e0e9;border-radius:50%;pointer-events:none}
-.atom{width:70px;height:70px;line-height:70px;border-radius:50%;color:#fff;font-size:27px;font-weight:bold}.h{background:#e77373}.o{background:#5289d2}.c{background:#555}.n{background:#4f9b72}.cl{background:#54a66c}
-.e{width:28px;height:28px;line-height:26px;border-radius:50%;background:#ffe36b;border:1px solid #b99400;font-size:20px;cursor:grab;z-index:5;user-select:none}.e.ok{background:#79d67b}.e.ng{background:#ff8a8a}
-#msg{min-height:28px;font-weight:bold;color:#14528f}
-</style></head><body>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f8fc;color:#18324a;text-align:center;
+font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif}
+h1{margin:15px 5px 8px;font-size:28px}
+h2{margin:10px 5px;font-size:23px}
+p{margin:8px}
+button{
+  margin:5px;padding:11px 15px;background:#fff;color:#176db7;
+  border:2px solid #79a8d1;border-radius:12px;font-size:18px;
+  cursor:pointer
+}
+#menu{max-width:800px;margin:auto}
+#game{display:none}
+#board{
+  position:relative;width:min(96vw,1100px);height:clamp(440px,68vh,590px);
+  margin:10px auto 16px;background:#fff;border:3px solid #8ab0dc;
+  border-radius:20px;overflow:hidden;touch-action:none
+}
+.ring,.atom,.electron{position:absolute;transform:translate(-50%,-50%)}
+.ring{
+  width:84px;height:84px;border:2px dashed #d5e0e9;border-radius:50%;
+  pointer-events:none
+}
+.atom{
+  width:70px;height:70px;line-height:70px;border-radius:50%;
+  color:#fff;font-size:27px;font-weight:bold;z-index:2
+}
+.h{background:#e77373}.o{background:#5289d2}.c{background:#555}
+.n{background:#4f9b72}.cl{background:#54a66c}
+.electron{
+  width:30px;height:30px;line-height:27px;border-radius:50%;
+  background:#ffe36b;border:2px solid #b99400;color:#18324a;
+  font-size:20px;z-index:5;cursor:grab;user-select:none
+}
+.electron.ok{background:#79d67b;border-color:#278d36}
+.electron.ng{background:#ff9b9b;border-color:#d52f2f}
+#msg{min-height:30px;margin:8px;font-weight:bold;color:#14528f}
+</style>
+</head>
+<body>
+
 <h1>電子式をつくろう</h1>
-<div id="menu"><p>つくる分子を選んでください。</p>
-<button onclick="start('h2')">H₂</button><button onclick="start('hcl')">HCl</button>
-<button onclick="start('h2o')">H₂O</button><button onclick="start('co2')">CO₂</button>
-<button onclick="start('n2')">N₂</button><button onclick="start('nh3')">NH₃</button></div>
-<div id="game"><h2 id="title"></h2><p>電子を輪にドラッグしよう。</p><div id="board"></div>
-<button onclick="check()">正誤判定</button><button onclick="draw()">最初から</button><button onclick="back()">分子を選ぶ</button><p id="msg"></p></div>
+
+<div id="menu">
+  <p>つくる分子を選んでください。</p>
+  <button onclick="start('h2')">H₂</button>
+  <button onclick="start('hcl')">HCl</button>
+  <button onclick="start('h2o')">H₂O</button>
+  <button onclick="start('co2')">CO₂</button>
+  <button onclick="start('n2')">N₂</button>
+  <button onclick="start('nh3')">NH₃</button>
+</div>
+
+<div id="game">
+  <h2 id="title"></h2>
+  <p>電子を輪にドラッグしよう。</p>
+  <div id="board"></div>
+  <button onclick="check()">正誤判定</button>
+  <button onclick="draw()">最初から</button>
+  <button onclick="back()">分子を選ぶ</button>
+  <p id="msg"></p>
+</div>
+
 <script>
-const B=document.querySelector('#board'),M=document.querySelector('#menu'),G=document.querySelector('#game'),T=document.querySelector('#title'),MSG=document.querySelector('#msg');
-let now,dots=[];
-const D={
-h2:{n:'H₂ の電子式',a:[['H','h',.35,.42],['H','h',.65,.42]],b:[[[.5,.42],2]],l:[]},
-hcl:{n:'HCl の電子式',a:[['H','h',.3,.42],['Cl','cl',.7,.42]],b:[[[.5,.42],2]],l:[[[.7,.24],[.7,.6],[.88,.42]]]},
-h2o:{n:'H₂O の電子式',a:[['H','h',.22,.43],['O','o',.5,.43],['H','h',.78,.43]],b:[[[.36,.43],2],[[.64,.43],2]],l:[[[.5,.25],[.5,.61]]]},
-co2:{n:'CO₂ の電子式',a:[['O','o',.25,.42],['C','c',.5,.42],['O','o',.75,.42]],b:[[[.375,.42],4],[[.625,.42],4]],l:[[[.25,.24],[.25,.6],[.07,.42]],[[.75,.24],[.75,.6],[.93,.42]]]},
-n2:{n:'N₂ の電子式',a:[['N','n',.35,.42],['N','n',.65,.42]],b:[[[.5,.42],6]],l:[[[.35,.24],[.35,.6],[.17,.42]],[[.65,.24],[.65,.6],[.83,.42]]]},
-nh3:{n:'NH₃ の電子式',a:[['N','n',.5,.33],['H','h',.25,.33],['H','h',.75,.33],['H','h',.5,.7]],b:[[[.375,.33],2],[[.625,.33],2],[[.5,.515],2]],l:[[[.5,.15]]]}
+const board=document.getElementById("board");
+const menu=document.getElementById("menu");
+const game=document.getElementById("game");
+const title=document.getElementById("title");
+const msg=document.getElementById("msg");
+
+let molecule=null;
+let electrons=[];
+
+/*
+ b = 共有電子対の場所と電子数
+ l = 孤立電子対の場所
+ 各孤立電子対の輪には電子が2個入れば正解
+*/
+const data={
+  h2:{
+    title:"H₂ の電子式",
+    atoms:[["H","h",0.35,0.42],["H","h",0.65,0.42]],
+    b:[[[0.50,0.42],2]],
+    l:[]
+  },
+  hcl:{
+    title:"HCl の電子式",
+    atoms:[["H","h",0.30,0.42],["Cl","cl",0.70,0.42]],
+    b:[[[0.50,0.42],2]],
+    l:[
+      [0.70,0.23],[0.70,0.61],[0.87,0.42]
+    ]
+  },
+  h2o:{
+    title:"H₂O の電子式",
+    atoms:[["H","h",0.22,0.43],["O","o",0.50,0.43],["H","h",0.78,0.43]],
+    b:[[[0.36,0.43],2],[[0.64,0.43],2]],
+    l:[
+      [0.50,0.23],[0.50,0.63]
+    ]
+  },
+  co2:{
+    title:"CO₂ の電子式",
+    atoms:[["O","o",0.25,0.42],["C","c",0.50,0.42],["O","o",0.75,0.42]],
+    b:[[[0.375,0.42],4],[[0.625,0.42],4]],
+    l:[
+      [0.25,0.22],[0.25,0.62],[0.07,0.42],
+      [0.75,0.22],[0.75,0.62],[0.93,0.42]
+    ]
+  },
+  n2:{
+    title:"N₂ の電子式",
+    atoms:[["N","n",0.35,0.42],["N","n",0.65,0.42]],
+    b:[[[0.50,0.42],6]],
+    l:[
+      [0.16,0.42],[0.84,0.42]
+    ]
+  },
+  nh3:{
+    title:"NH₃ の電子式",
+    atoms:[["H","h",0.25,0.33],["N","n",0.50,0.33],["H","h",0.75,0.33],["H","h",0.50,0.70]],
+    b:[[[0.375,0.33],2],[[0.625,0.33],2],[[0.50,0.515],2]],
+    l:[
+      [0.50,0.14]
+    ]
+  }
 };
-function put(x,y,c,cl){let e=document.createElement('div');e.className=cl;e.style.left=x*100+'%';e.style.top=y*100+'%';e.textContent=c;B.append(e);return e}
-function start(k){now=D[k];M.style.display='none';G.style.display='block';T.textContent=now.n;draw()}
-function draw(){B.innerHTML='';dots=[];MSG.textContent='';let total=now.b.reduce((s,x)=>s+x[1],0)+now.l.reduce((s,x)=>s+x.length? s: s,0);
-now.b.forEach(x=>put(x[0][0],x[0][1],'','ring'));now.l.forEach(p=>p.forEach(x=>put(x[0],x[1],'','ring')));
-now.a.forEach(x=>put(x[2],x[3],x[0],'atom '+x[1]));
-let n=now.b.reduce((s,x)=>s+x[1],0)+now.l.reduce((s,p)=>s+p.length*2,0);
-for(let i=0;i<n;i++){let e=put(.1+(i%8)*.115,.84+Math.floor(i/8)*.09,'●','e');drag(e);dots.push(e)}}
-function drag(e){e.onpointerdown=q=>{e.setPointerCapture(q.pointerId);let r=B.getBoundingClientRect();e.onpointermove=v=>{e.style.left=Math.max(.02,Math.min(.98,(v.clientX-r.left)/r.width))*100+'%';e.style.top=Math.max(.02,Math.min(.98,(v.clientY-r.top)/r.height))*100+'%'}}}
-function check(){let z=[];now.b.forEach((x,i)=>z.push({p:x[0],need:x[1],id:'b'+i,c:0}));now.l.forEach((p,i)=>p.forEach(x=>z.push({p:x,need:2,id:'l'+i,c:0})));
-let hit=dots.map(e=>{let x=parseFloat(e.style.left)/100,y=parseFloat(e.style.top)/100,b=-1,d=9;z.forEach((q,i)=>{let t=Math.hypot(x-q.p[0],y-q.p[1]);if(t<d){d=t;b=i}});if(d<.075){z[b].c++;return b}return-1});
-let ok=z.every(q=>q.c===q.need);dots.forEach((e,i)=>{e.className='e '+(hit[i]>=0&&z[hit[i]].c===z[hit[i]].need?'ok':'ng')});MSG.textContent=ok?'正解！ よくできました。':'緑の電子は正しい位置です。赤い電子を動かしましょう。'}
-function back(){G.style.display='none';M.style.display='block';B.innerHTML=''}
-</script></body></html>
+
+function put(x,y,text,className){
+  const el=document.createElement("div");
+  el.className=className;
+  el.style.left=(x*100)+"%";
+  el.style.top=(y*100)+"%";
+  el.textContent=text;
+  board.appendChild(el);
+  return el;
+}
+
+function start(key){
+  molecule=data[key];
+  title.textContent=molecule.title;
+  menu.style.display="none";
+  game.style.display="block";
+  draw();
+}
+
+function draw(){
+  board.innerHTML="";
+  electrons=[];
+  msg.textContent="";
+
+  molecule.b.forEach(item=>{
+    put(item[0][0],item[0][1],"","ring");
+  });
+
+  molecule.l.forEach(pos=>{
+    put(pos[0],pos[1],"","ring");
+  });
+
+  molecule.atoms.forEach(a=>{
+    put(a[2],a[3],a[0],"atom "+a[1]);
+  });
+
+  const total=
+    molecule.b.reduce((sum,item)=>sum+item[1],0)
+    +molecule.l.length*2;
+
+  for(let i=0;i<total;i++){
+    const x=0.08+(i%9)*0.105;
+    const y=0.84+Math.floor(i/9)*0.09;
+    const el=put(x,y,"●","electron");
+    setDrag(el);
+    electrons.push(el);
+  }
+}
+
+function setDrag(el){
+  el.addEventListener("pointerdown",ev=>{
+    el.setPointerCapture(ev.pointerId);
+
+    function move(e){
+      const r=board.getBoundingClientRect();
+      let x=(e.clientX-r.left)/r.width;
+      let y=(e.clientY-r.top)/r.height;
+
+      x=Math.max(0.02,Math.min(0.98,x));
+      y=Math.max(0.02,Math.min(0.98,y));
+
+      el.style.left=(x*100)+"%";
+      el.style.top=(y*100)+"%";
+    }
+
+    el.addEventListener("pointermove",move);
+
+    el.addEventListener("pointerup",()=>{
+      el.removeEventListener("pointermove",move);
+    },{once:true});
+  });
+}
+
+function check(){
+  const zones=[];
+
+  molecule.b.forEach((item,index)=>{
+    zones.push({
+      id:"bond"+index,
+      x:item[0][0],
+      y:item[0][1],
+      need:item[1],
+      count:0
+    });
+  });
+
+  molecule.l.forEach((pos,index)=>{
+    zones.push({
+      id:"lone"+index,
+      x:pos[0],
+      y:pos[1],
+      need:2,
+      count:0
+    });
+  });
+
+  const rect=board.getBoundingClientRect();
+  const belongs=[];
+
+  electrons.forEach(el=>{
+    const x=parseFloat(el.style.left)/100;
+    const y=parseFloat(el.style.top)/100;
+
+    let nearest=-1;
+    let shortest=Infinity;
+
+    zones.forEach((z,index)=>{
+      /* 画面の実際のpx距離で判定するため、縦横画面でも安定 */
+      const dx=(x-z.x)*rect.width;
+      const dy=(y-z.y)*rect.height;
+      const distance=Math.sqrt(dx*dx+dy*dy);
+
+      if(distance<shortest){
+        shortest=distance;
+        nearest=index;
+      }
+    });
+
+    /* 輪の半径42px以内なら、その輪に入っている */
+    if(shortest<=42){
+      belongs.push(nearest);
+      zones[nearest].count++;
+    }else{
+      belongs.push(-1);
+    }
+  });
+
+  const allCorrect=zones.every(z=>z.count===z.need);
+
+  electrons.forEach((el,index)=>{
+    const zoneNumber=belongs[index];
+
+    if(zoneNumber===-1){
+      el.className="electron ng";
+      return;
+    }
+
+    const z=zones[zoneNumber];
+
+    /*
+      その輪に必要な数と同じなら緑。
+      例：CO₂の右O下の輪に電子2個なら、
+      分子全体が未完成でもその2個は緑。
+    */
+    el.className=(z.count===z.need)
+      ?"electron ok"
+      :"electron ng";
+  });
+
+  msg.textContent=allCorrect
+    ?"正解！ よくできました。"
+    :"緑の電子は正しい位置です。赤い電子を動かしましょう。";
+}
+
+function back(){
+  board.innerHTML="";
+  game.style.display="none";
+  menu.style.display="block";
+}
+</script>
+</body>
+</html>
